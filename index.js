@@ -1,40 +1,65 @@
 import express from 'express';
 import bodyParser from 'body-parser';
 import mongoose from 'mongoose';
+import userRouter from './routes/userRouter.js';
+import jwt from "jsonwebtoken";
+import dotenv from "dotenv";
+import productRouter from './routes/productRouter.js';
+import orderRouter from './routes/orderRouter.js';
+import cors from "cors";
+dotenv.config()
+
 
 const app = express();
 
-const mongoUrl ="mongodb+srv://admin:123@cluster0.fnith.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
+const mongoUrl = process.env.MONGO_DB_URI
 
-mongoose.connect(mongoUrl, {})
+app.use(cors())
+
+mongoose.connect(mongoUrl,{})
 
 const connection = mongoose.connection;
 
-connection.once("open",() => {
-    console.log("Database Connected");
+connection.once("open",()=>{
+  console.log("Database connected");
 })
 
 
-app.use(bodyParser.json());
+app.use(bodyParser.json())
 
-app.get("/",
-    (req,res)=>{
-        console.log(req)
-        console.log("This is a get request");
+app.use(
+
+  (req,res,next)=>{
+
+
+
+    const token = req.header("Authorization")?.replace("Bearer ","")
+    console.log(token)
+
+    if(token != null){
+      jwt.verify(token,process.env.SECRET , (error,decoded)=>{
+
+        if(!error){
+          req.user = decoded   
+          console.log(decoded)     
+        }
+
+      })
     }
-);
 
-app.post("/",
-    (req,res)=>{
-        console.log("This is a get request");
-    }
-);
+    next()
 
-    
+  }
+
+)
+app.use("/api/users",userRouter)
+app.use("/api/products",productRouter)
+app.use("/api/orders",orderRouter)
+
 
 app.listen(
-    5000,
-    ()=>{
-        console.log("Server is running on port 5000");
-    }
+  5000,
+  ()=>{
+    console.log('Server is running on port 5000');
+  }
 )
